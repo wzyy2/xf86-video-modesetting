@@ -74,7 +74,7 @@ AM_CONDITIONAL(HAVE_XEXTPROTO_71, [ test "$HAVE_XEXTPROTO_71" = "yes" ])
 # Checks for header files.
 AC_HEADER_STDC
 
-PKG_CHECK_MODULES(DRM, [libdrm >= 2.2])
+PKG_CHECK_MODULES(DRM, [libdrm >= 2.4.46])
 PKG_CHECK_MODULES([PCIACCESS], [pciaccess >= 0.10])
 AM_CONDITIONAL(DRM, test "x$DRM" = xyes)
 
