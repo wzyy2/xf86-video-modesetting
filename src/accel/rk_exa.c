@@ -79,7 +79,7 @@ RKModifyPixmapHeader(PixmapPtr pPixmap, int width, int height,
     modesettingPtr ms = modesettingPTR(pScrn);
     uint32_t size;
     xf86DrvMsg(pScrn->scrnIndex, X_INFO, "1CREATE_PIXMAP_FB(%p) : (x,y,w,h)=(%d,%d,%d,%d, %x)\n",
-       pPixmap, pPixmap->drawable.width, pPixmap->drawable.height,
+               pPixmap, pPixmap->drawable.width, pPixmap->drawable.height,
                pPixmap->drawable.bitsPerPixel,  pPixmap->drawable.depth, pPixData);
     if (pPixData)
         pPixmap->devPrivate.ptr = pPixData;
@@ -135,10 +135,10 @@ RKModifyPixmapHeader(PixmapPtr pPixmap, int width, int height,
         priv->bo = dumb_bo_create(ms->fd, pPixmap->drawable.width,
                                   pPixmap->drawable.height, pPixmap->drawable.bitsPerPixel );
         if (!priv->bo) {
-             xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
-                        "failed to allocate %dx%d bo, size=%d, flags=%08x \n",
-                        pPixmap->drawable.width,
-                        pPixmap->drawable.height, size, 0);
+            xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
+                       "failed to allocate %dx%d bo, size=%d, flags=%08x \n",
+                       pPixmap->drawable.width,
+                       pPixmap->drawable.height, size, 0);
             return FALSE;
         }
 
@@ -194,8 +194,11 @@ void rkExaInit(ScreenPtr pScreen)
     exa->FinishAccess = RKFinishAccess;
     exa->PixmapIsOffscreen = RKPixmapIsOffscreen;
 
-    if (rkExaRGAInit(pScrn, exa))
+    if (!rkExaRGAInit(pScrn, exa)) {
+        xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
+                   "EXA-RGA initialization failed \n");
         goto free_exa;
+    }
 
     if (!exaDriverInit(pScreen, exa)) {
         xf86DrvMsg(pScrn->scrnIndex, X_ERROR,

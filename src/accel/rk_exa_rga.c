@@ -22,15 +22,11 @@ typedef struct
 
 typedef struct
 {
-    static struct rga_image scr_img;
-    static struct rga_image dst_img;
-
-    int src_fd;
-    int dst_fd;
+    struct rga_image src_img;
+    struct rga_image dst_img;
 
     PixmapPtr pSrc;
     PixmapPtr pDst;
-
 } CopyBox;
 
 static SoildBox gSoildBox;
@@ -42,12 +38,12 @@ RKExaRGAPrepareSolid(PixmapPtr pPixmap, int alu, Pixel planemask, Pixel fill_col
     ScrnInfoPtr pScrn = xf86ScreenToScrn(pPixmap->drawable.pScreen);
     RKPixmapPrivPtr priv = exaGetPixmapDriverPrivate(pPixmap);
     modesettingPtr ms = modesettingPTR(pScrn);
-    int mode;
+    int mode, src_fd;
 
     if (! !priv->bo)
         return FALSE;
 
-    drmPrimeHandleToFD(ms->dev->fd, priv->bo->handle, 0, &gSoildBox.src_fd);
+    drmPrimeHandleToFD(ms->dev->fd, priv->bo->handle, 0, &src_fd);
 
     switch (pPixmap->drawable.depth) {
     case 32:
@@ -120,7 +116,7 @@ static void RKExaRGADoneSolid(PixmapPtr pPixmap)
     //    xf86DrvMsg(pScrn->scrnIndex, X_INFO, "> %s \n",
     //               __func__);
     rga_exec(ms->ctx);
-    close(src_fd);
+    close(gSoildBox.solid_img.bo[0]);
 }
 
 
@@ -133,7 +129,7 @@ RKExaRGAPrepareCopy(PixmapPtr pSrc, PixmapPtr pDst, int xdir, int ydir,
     modesettingPtr ms = modesettingPTR(pScrn);
     RKPixmapPrivPtr priv_src = exaGetPixmapDriverPrivate(pSrc);
     RKPixmapPrivPtr priv_dst = exaGetPixmapDriverPrivate(pDst);
-    int mode;
+    int mode, src_fd, dst_fd;
 
     gCopyBox.pSrc = pSrc;
     gCopyBox.pDst = pDst;
@@ -147,17 +143,14 @@ RKExaRGAPrepareCopy(PixmapPtr pSrc, PixmapPtr pDst, int xdir, int ydir,
     if (pDst->drawable.width < 40 || pDst->drawable.height < 40)
         return FALSE;
 
-    if (priv_dst->bo->handle == 1)
-        return FALSE;
+        xf86DrvMsg(pScrn->scrnIndex, X_INFO,
+               "> %s xdir %d ydir %d  srcdepth %d dstdepth %d srcbo %x dstbo %x\n",
+               __func__, xdir, ydir, pSrc->drawable.depth,
+               pDst->drawable.depth, priv_src->bo->handle,
+               priv_dst->bo->handle);
 
-    //    xf86DrvMsg(pScrn->scrnIndex, X_INFO,
-    //           "> %s xdir %d ydir %d  srcdepth %d dstdepth %d srcbo %x dstbo %x\n",
-    //           __func__, xdir, ydir, pSrc->drawable.depth,
-    //           pDst->drawable.depth, priv_src->bo->handle,
-    //           priv_dst->bo->handle);
-
-    drmPrimeHandleToFD(ms->fd, priv_src->bo->handle, 0, &gCopyBox.src_fd);
-    drmPrimeHandleToFD(ms->fd, priv_dst->bo->handle, 0, &gCopyBox.dst_fd);
+    drmPrimeHandleToFD(ms->fd, priv_src->bo->handle, 0, &src_fd);
+    drmPrimeHandleToFD(ms->fd, priv_dst->bo->handle, 0, &dst_fd);
 
     switch (pSrc->drawable.depth) {
     case 32:
@@ -172,7 +165,7 @@ RKExaRGAPrepareCopy(PixmapPtr pSrc, PixmapPtr pDst, int xdir, int ydir,
         break;
     }
 
-    gCopyBox.src_img.bo[0] = copy_src_fd;
+    gCopyBox.src_img.bo[0] = src_fd;
     gCopyBox.src_img.width = pSrc->drawable.width;
     gCopyBox.src_img.height = pSrc->drawable.height;
     gCopyBox.src_img.stride = pSrc->drawable.width * 4;
@@ -192,7 +185,7 @@ RKExaRGAPrepareCopy(PixmapPtr pSrc, PixmapPtr pDst, int xdir, int ydir,
         break;
     }
 
-    gCopyBox.dst_img.bo[0] = copy_dst_fd;
+    gCopyBox.dst_img.bo[0] = dst_fd;
     gCopyBox.dst_img.width = pDst->drawable.width;
     gCopyBox.dst_img.height = pDst->drawable.height;
     gCopyBox.dst_img.stride = pDst->drawable.width * 4;
@@ -208,10 +201,10 @@ static void RKExaRGACopy(PixmapPtr pDstPixmap, int srcX, int srcY,
     ScrnInfoPtr pScrn = xf86ScreenToScrn(pDstPixmap->drawable.pScreen);
     RKPixmapPrivPtr priv = exaGetPixmapDriverPrivate(pDstPixmap);
     modesettingPtr ms = modesettingPTR(pScrn);
-    RKPixmapPrivPtr priv2 = exaGetPixmapDriverPrivate(pSrcbox);
-    RKPixmapPrivPtr priv3 = exaGetPixmapDriverPrivate(pDstbox);
+    RKPixmapPrivPtr priv2 = exaGetPixmapDriverPrivate(gCopyBox.pSrc);
+    RKPixmapPrivPtr priv3 = exaGetPixmapDriverPrivate(gCopyBox.pDst);
 
-    if (width < 40 || height < 40) {
+    if (width < 50 || height < 50) {
         dumb_bo_map(ms->fd, priv3->bo);
         dumb_bo_map(ms->fd, priv2->bo);
         unsigned int *begin = priv3->bo->ptr;
@@ -219,19 +212,19 @@ static void RKExaRGACopy(PixmapPtr pDstPixmap, int srcX, int srcY,
         for (int i = 0; i < height; i += 1) {
             for (int a = 0; a < width; a += 1) {
                 begin[dstX + a +
-                        (dstY + i) * pDstbox->drawable.width] =
+                        (dstY + i) * gCopyBox.pDst->drawable.width] =
                         beginsrc[srcX + a +
                         (srcY +
-                         i) * pSrcbox->drawable.width];
+                         i) * gCopyBox.pSrc->drawable.width];
             }
         }
 
-    } else {
-        //		xf86DrvMsg(pScrn->scrnIndex, X_INFO,
-        //			   "> %s srcX %d srcY %d dstX %d dstY %d width %d height %d\n",
-        //			   __func__, srcX, srcY, dstX, dstY, width, height);
+    } else  {
+                xf86DrvMsg(pScrn->scrnIndex, X_INFO,
+                       "> %s srcX %d srcY %d dstX %d dstY %d width %d height %d\n",
+                       __func__, srcX, srcY, dstX, dstY, width, height);
 
-        rga_copy(ms->ctx, &copy_scr_img, &copy_dst_img, srcX, srcY,
+        rga_copy(ms->ctx, &gCopyBox.src_img, &gCopyBox.dst_img, srcX, srcY,
                  dstX, dstY, width, height);
 
         //            copy_dst_img.fill_color = 0xff00;
@@ -248,8 +241,8 @@ static void RKExaRGADoneCopy(PixmapPtr pDstPixmap)
     //                   __func__);
     rga_exec(ms->ctx);
 
-    close(gCopyBox.src_fd);
-    close((gCopyBox.dst_fd);
+    close(gCopyBox.src_img.bo[0]);
+    close(gCopyBox.dst_img.bo[0]);
 }
 
 static struct rga_image compostie_scr_img;
