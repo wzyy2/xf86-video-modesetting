@@ -1,0 +1,12 @@
+src/compat-api.h
+src/driver.c
+src/driver.h
+src/drmmode_display.c
+src/drmmode_display.h
+src/rk_exa.h
+src/Makefile.am
+src/accel/rk_exa.c
+src/accel/rk_exa.h
+src/accel/rk_exa_rga.c
+src/dumb_bo.c
+src/dumb_bo.h
