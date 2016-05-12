@@ -63,6 +63,11 @@ dumb_bo_create(int fd,
     bo->handle = arg.handle;
     bo->size = arg.size;
     bo->pitch = arg.pitch;
+    bo->refcnt = 1;
+
+    bo->width = width;
+    bo->height = height;
+    bo->bpp = bpp;
 
     return bo;
  err_free:
@@ -134,5 +139,21 @@ dumb_get_bo_from_fd(int fd, int handle, int pitch, int size)
     }
     bo->pitch = pitch;
     bo->size = size;
+    bo->refcnt = 1;
+
     return bo;
+}
+
+void dumb_bo_unreference(int fd, struct dumb_bo *bo)
+{
+    if (!bo)
+        return;
+
+    if (--bo->refcnt == 0)
+        dumb_bo_destroy(fd, bo);
+}
+
+void dumb_bo_reference(struct dumb_bo *bo)
+{
+    bo->refcnt++;
 }
