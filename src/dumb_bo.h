@@ -29,11 +29,17 @@
 
 #include <stdint.h>
 
+
 struct dumb_bo {
     uint32_t handle;
     uint32_t size;
     void *ptr;
     uint32_t pitch;
+    int refcnt;
+
+    int height;
+    int width;
+    int bpp;
 };
 
 struct dumb_bo *dumb_bo_create(int fd, const unsigned width,
@@ -41,5 +47,7 @@ struct dumb_bo *dumb_bo_create(int fd, const unsigned width,
 int dumb_bo_map(int fd, struct dumb_bo *bo);
 int dumb_bo_destroy(int fd, struct dumb_bo *bo);
 struct dumb_bo *dumb_get_bo_from_fd(int fd, int handle, int pitch, int size);
+void dumb_bo_unreference(int fd, struct dumb_bo *bo);
+void dumb_bo_reference(struct dumb_bo *bo);
 
 #endif
