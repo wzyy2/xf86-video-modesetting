@@ -54,6 +54,15 @@ AC_ARG_WITH(xorg-module-dir,
             [moduledir="$withval"],
             [moduledir="$libdir/xorg/modules"])
 
+AC_ARG_ENABLE(glamor,  AS_HELP_STRING([--enable-glamor],
+            [Enable glamor (default: disabled)]),
+            [GLAMOR=$enableval], [GLAMOR=no])
+
+if test "x${GLAMOR}" == "xyes"; then
+          AC_DEFINE(GLAMOR, 1, [Glamor])
+          AC_DEFINE(GLAMOR_HAS_GBM, 1, [Glamor with gbm])
+fi
+
 # Checks for extensions
 XORG_DRIVER_CHECK_EXT(RANDR, randrproto)
 XORG_DRIVER_CHECK_EXT(XF86DRI, xextproto x11)
@@ -75,7 +84,7 @@ AM_CONDITIONAL(HAVE_XEXTPROTO_71, [ test "$HAVE_XEXTPROTO_71" = "yes" ])
 AC_HEADER_STDC
 
 PKG_CHECK_MODULES(DRI2, [dri2proto >= 2.6])
-PKG_CHECK_MODULES(DRM, [libdrm >= 2.4.46])
+PKG_CHECK_MODULES(DRM, [libdrm >= 2.4.46] [libdrm_rockchip])
 PKG_CHECK_MODULES([PCIACCESS], [pciaccess >= 0.10])
 AM_CONDITIONAL(DRM, test "x$DRM" = xyes)
 
