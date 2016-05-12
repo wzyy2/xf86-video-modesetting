@@ -54,6 +54,9 @@ Enable or disable use of the shadow framebuffer layer.  Default: on.
 .BI "Option \*qAccelMethod\*q \*q" string \*q
 One of \*qglamor\*q or \*qnone\*q.  Default: glamor
 .TP
+.BI "Option \*qEXA\*q \*q" string \*q
+One of \*qTRUEr\*q or \*qFALSE\*q.  Default: TRUE
+.TP
 .BI "Option \*qPageFlip\*q \*q" boolean \*q
 Enable DRI3 page flipping.  The default is
 .B on.

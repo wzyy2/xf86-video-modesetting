@@ -129,6 +129,7 @@ static const OptionInfoRec Options[] = {
     {OPTION_ACCEL_METHOD, "AccelMethod", OPTV_STRING, {0}, FALSE},
     {OPTION_PAGEFLIP, "PageFlip", OPTV_BOOLEAN, {0}, FALSE},
     {OPTION_ZAPHOD_HEADS, "ZaphodHeads", OPTV_STRING, {0}, FALSE},
+    {OPTION_EXA, "EXA", OPTV_BOOLEAN, {0}, FALSE}, 
     {-1, NULL, OPTV_NONE, {0}, FALSE}
 };
 
@@ -648,6 +649,33 @@ FreeRec(ScrnInfoPtr pScrn)
     free(ms->drmmode.Options);
     free(ms);
 
+}
+
+static void
+try_enable_exa(ScreenPtr pScreen)
+{
+    ScrnInfoPtr pScrn = xf86ScreenToScrn(pScreen);
+    modesettingPtr ms = modesettingPTR(pScrn);
+    Bool do_exa;
+    xf86GetOptValBool(ms->drmmode.Options, OPTION_EXA, &do_exa);
+
+     ms->drmmode.exa = FALSE;
+
+    if (do_exa == TRUE) {
+        if (xf86LoadSubModule(pScrn, "exa")) {
+            if (rkExaInit(pScreen)) {
+                xf86DrvMsg(pScrn->scrnIndex, X_CONFIG, "EXA initialized\n");
+                ms->drmmode.exa = TRUE;
+            } else {
+                xf86DrvMsg(pScrn->scrnIndex, X_CONFIG, "EXA initialization failed\n");
+            }
+        } else {
+        xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
+                   "Failed to load EXA module\n");
+        }
+    } else {
+        xf86DrvMsg(pScrn->scrnIndex, X_CONFIG, "EXA disabled\n");
+    }
 }
 
 static void
@@ -1265,6 +1293,8 @@ ScreenInit(ScreenPtr pScreen, int argc, char **argv)
     }
 #endif
 
+    try_enable_exa(pScreen);
+
     return EnterVT(pScrn);
 }
 
@@ -1339,6 +1369,10 @@ CloseScreen(ScreenPtr pScreen)
         ms_dri2_close_screen(pScreen);
     }
 #endif
+
+    if (ms->drmmode.exa) {
+        rkExaExit(pScreen);
+    }
 
     ms_vblank_close_screen(pScreen);
 

@@ -32,8 +32,6 @@
 #include <xf86drm.h>
 #include <xf86Crtc.h>
 #include <damage.h>
-
-#define GLAMOR 1
  
 #ifdef GLAMOR
 #define GLAMOR_FOR_XORG 1
@@ -43,6 +41,7 @@
 #endif
 #endif
 
+#include "rk_exa.h"
 #include "drmmode_display.h"
 #define DRV_ERROR(msg)	xf86DrvMsg(pScrn->scrnIndex, X_ERROR, msg);
 #define MS_LOGLEVEL_DEBUG 4
@@ -54,6 +53,7 @@ typedef enum {
     OPTION_ACCEL_METHOD,
     OPTION_PAGEFLIP,
     OPTION_ZAPHOD_HEADS,
+    OPTION_EXA,
 } modesettingOpts;
 
 typedef struct
@@ -120,6 +120,11 @@ typedef struct _modesettingRec {
     Bool dirty_enabled;
 
     uint32_t cursor_width, cursor_height;
+
+    /** Rockchip  */
+    struct rockchip_device  *dev;
+    struct rga_context *ctx;
+    ExaDriverPtr exa;
 } modesettingRec, *modesettingPtr;
 
 #define modesettingPTR(p) ((modesettingPtr)((p)->driverPrivate))

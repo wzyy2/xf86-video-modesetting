@@ -64,6 +64,7 @@ typedef struct {
     OptionInfoPtr Options;
 
     Bool glamor;
+    Bool exa;
     Bool shadow_enable;
     /** Is Option "PageFlip" enabled? */
     Bool pageflip;
